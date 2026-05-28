@@ -1,17 +1,20 @@
 import time, io, csv, random, json 
-from flask import Flask, render_template, request, redirect, url_for, session, Response
+from flask import Flask, render_template, request, redirect, url_for, session, flash, Response
+from werkzeug.security import generate_password_hash, check_password_hash
 from flask_sqlalchemy import SQLAlchemy
 app = Flask(__name__)
-app.secret_key = 'your_secure_secret_key'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///lms.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db = SQLAlchemy(app)
+app.secret_key = 'your_secure_secret_key_here'
 
+db = SQLAlchemy(app)
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), unique=True, nullable=False)
-    password = db.Column(db.String(50), nullable=False)
+    password = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(10), default='student')
+    is_first_login = db.Column(db.Boolean, default=True, nullable=False)
+
 class Exam(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False)
@@ -38,30 +41,21 @@ class ExamResult(db.Model):
 with app.app_context():
     db.create_all()
     if not User.query.filter_by(username='admin').first():
-        admin_user = User(username='admin', password='21058452', role='admin')
+        hashed_admin_pw = generate_password_hash('21058452')
+        admin_user = User(username='admin', password=hashed_admin_pw, role='admin', is_first_login=False)
         db.session.add(admin_user)
         db.session.commit()
 
 @app.route('/')
 def index():
     return redirect(url_for('login'))
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        uname = request.form.get('username')
-        pword = request.form.get('password')
-        user = User.query.filter_by(username=uname, password=pword).first()
-        if user:
-            session['user'] = user.username
-            session['role'] = user.role
-            return redirect(url_for('admin_panel' if user.role == 'admin' else 'dashboard'))
-        return "<h1>incorrect password and username!</h1><a href='/login'>exit</a>"
-    return render_template('login.html')
+
 @app.route('/dashboard')
 def dashboard():
     if 'user' not in session: return redirect(url_for('login'))
     all_exams = Exam.query.all()
     return render_template('dashboard.html', user=session['user'], exams=all_exams)
+
 @app.route('/admin')
 def admin_panel():
     if session.get('role') != 'admin': return redirect(url_for('login'))
@@ -70,13 +64,13 @@ def admin_panel():
                            questions=Question.query.all(), 
                            all_users=User.query.all(),
                            exams=Exam.query.all())
+
 @app.route('/profile')
 def profile():
     if 'user' not in session:
         return redirect(url_for('login'))
     current_user = session['user']
     user_results = ExamResult.query.filter_by(username=current_user).order_by(ExamResult.id.desc()).all()
-    
     return render_template('profile.html', user=current_user, results=user_results)
 
 @app.route('/add_exam', methods=['POST'])
@@ -90,6 +84,7 @@ def add_exam():
     db.session.add(new_exam)
     db.session.commit()
     return redirect(url_for('admin_panel'))
+
 @app.route('/add_question', methods=['POST'])
 def add_question():
     if session.get('role') != 'admin': return redirect(url_for('login'))
@@ -105,11 +100,13 @@ def add_question():
     db.session.add(new_q)
     db.session.commit()
     return redirect(url_for('admin_panel'))
+
 @app.route('/course/<int:exam_id>')
 def course_detail(exam_id):
     if 'user' not in session: return redirect(url_for('login'))
     exam = Exam.query.get_or_404(exam_id)
-    return render_template('course.html',user=session['user'], exam=exam)
+    return render_template('course.html', user=session['user'], exam=exam)
+
 @app.route('/start_quiz', methods=['POST'])
 def start_quiz():
     exam_id = request.form.get('exam_id')
@@ -121,7 +118,6 @@ def start_quiz():
         session['answers'] = {}
         session['start_time'] = time.time()
         
-       
         questions = Question.query.filter_by(exam_id=exam_id).all()
         if not questions:
             return "<h1>this question has not been prepared for this exam!</h1><a href='/dashboard'>back</a>"
@@ -158,7 +154,6 @@ def quiz(q_id):
             return redirect(url_for('summary'))
     
     time_left = max(0, int(600 - (time.time() - session.get('start_time', time.time()))))
-    
     answered_ids = list(answers.keys()) 
     
     return render_template('quiz.html', 
@@ -166,21 +161,31 @@ def quiz(q_id):
                            shuffled_ids=shuffled_ids, 
                            time_left=time_left, 
                            answered_ids=answered_ids) 
+
 @app.route('/summary')
 def summary():
     exam_id = session.get('current_exam_id')
     all_qs = Question.query.filter_by(exam_id=exam_id).all()
     answered_ids = [int(k) for k in session.get('answers', {}).keys()]
     return render_template('summary.html', all_questions=all_qs, answered_ids=answered_ids)
+
 @app.route('/add_student', methods=['POST'])
 def add_student():
     if session.get('role') != 'admin': return redirect(url_for('login'))
     uname = request.form.get('username')
-    pword = request.form.get('password')
+    
+    default_password = "1234"
+    hashed_pword = generate_password_hash(default_password)
+    
     if not User.query.filter_by(username=uname).first():
-        db.session.add(User(username=uname, password=pword, role='student'))
+        db.session.add(User(username=uname, password=hashed_pword, role='student', is_first_login=True))
         db.session.commit()
+        flash(f"student {uname} changed! Default Password: {default_password}")
+    else:
+        flash("no add user!")
+        
     return redirect(url_for('admin_panel'))
+
 @app.route('/export_results')
 def export_results():
     if session.get('role') != 'admin': return redirect(url_for('login'))
@@ -188,10 +193,10 @@ def export_results():
     writer = csv.writer(output)
     writer.writerow(['Student', 'Score', 'Total', 'Date'])
     for res in ExamResult.query.all():
-        writer.writerow([res.username, res.score, res.total, res.date_taken])
+        writer.writerow([res.username, res.score,
+res.total, res.date_taken])
     output.seek(0)
     return Response(output, mimetype="text/csv", headers={"Content-disposition": "attachment; filename=results.csv"})
-
 
 @app.route('/finish_quiz', methods=['POST'])
 def finish_quiz():
@@ -200,21 +205,15 @@ def finish_quiz():
     answers = session.get('answers', {})
     
     flagged_data = request.form.get('flagged_list', '[]')
-    try:
-        flagged_ids = json.loads(flagged_data) 
-    except:
-        flagged_ids = []
+    try: flagged_ids = json.loads(flagged_data) 
+    except: flagged_ids = []
     
     score = 0
     questions = Question.query.filter_by(exam_id=exam_id).all()
     
     for q in questions:
-        if q.id in flagged_ids:
-            continue 
-            
-        
-        if answers.get(str(q.id)) == q.correct_answer:
-            score += 1
+        if q.id in flagged_ids: continue 
+        if answers.get(str(q.id)) == q.correct_answer: score += 1
    
     new_result = ExamResult(
         username=session['user'], 
@@ -229,24 +228,17 @@ def finish_quiz():
 
 @app.route('/upload_csv', methods=['POST'])
 def upload_csv():
-    if session.get('role') != 'admin':
-        return redirect(url_for('login'))
-    
+    if session.get('role') != 'admin': return redirect(url_for('login'))
     exam_id = request.form.get('exam_id')
     file = request.files['file']
-    
-    if not file or not file.filename.endswith('.csv'):
-        return "<h1>please select CSV file</h1>"
+    if not file or not file.filename.endswith('.csv'): return "<h1>please select CSV file</h1>"
 
-   
     stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
     csv_input = csv.reader(stream)
-    
     next(csv_input) 
 
     for row in csv_input:
         if len(row) < 6: continue 
-        
         new_q = Question(
             exam_id=exam_id,
             text=row[0],
@@ -257,8 +249,63 @@ def upload_csv():
             correct_answer=row[5].lower() 
         )
         db.session.add(new_q)
-    
     db.session.commit()
     return redirect(url_for('admin_panel'))
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        user = User.query.filter_by(username=username).first()
+        
+        if user and check_password_hash(user.password, password):
+            session['user'] = user.username
+            session['role'] = user.role
+            
+           
+            if user.is_first_login:
+                return redirect(url_for('change_password'))
+            
+            if user.role == 'admin':
+                return redirect(url_for('admin_panel'))
+            else:
+                return redirect(url_for('dashboard'))
+        else:
+            flash("incorect password or username!")
+            
+    return render_template('login.html')
+
+
+@app.route('/change_password', methods=['GET', 'POST'])
+def change_password():
+    if 'user' not in session: return redirect(url_for('login'))
+        
+    if request.method == 'POST':
+        new_password = request.form.get('new_password')
+        confirm_password = request.form.get('confirm_password')
+        
+        if new_password != confirm_password:
+            flash("no mach password!")
+            return redirect(url_for('change_password'))
+            
+        hashed_pw = generate_password_hash(new_password)
+        
+      
+        user = User.query.filter_by(username=session['user']).first()
+        if user:
+            user.password = hashed_pw
+            user.is_first_login = False 
+            db.session.commit()
+            flash("changing password!")
+            
+            if user.role == 'admin':
+                return redirect(url_for('admin_panel'))
+            else:
+                return redirect(url_for('dashboard'))
+        
+    return render_template('change_password.html')
+
 if __name__ == '__main__':
-    app.run(debug=True)    
+    app.run(debug=True) 
