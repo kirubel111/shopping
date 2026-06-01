@@ -2,140 +2,464 @@
 <html lang="am">
 <head>
     <meta charset="UTF-8">
-    <title>Admin Panel - Laska Exam System</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/output.css') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>የአድሚን ዳሽቦርድ</title>
+   <link rel="stylesheet" href="{{ url_for('static', filename='css/output.css') }}">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class'
+        }
+    </script>
+    
+    <script>
+        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .hidden-section { display: none !important; }
+        .active-section { display: block !important; animation: fadeIn 0.3s ease-in-out forwards; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
 </head>
-<body class="bg-gray-100 font-sans">
-    <nav class="bg-slate-800 text-white p-4 flex justify-between shadow-lg">
-        <span class="font-bold text-xl">Laska Admin Panel</span>
-        <a href="/dashboard" class="text-sm bg-slate-700 px-3 py-1 rounded">View Dashboard</a>
-    </nav>
+<body class="bg-slate-50 dark:bg-slate-950 flex h-screen overflow-hidden text-slate-800 dark:text-slate-100 transition-colors duration-300">
 
-    <div class="max-w-6xl mx-auto p-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <aside class="w-72 bg-slate-900 dark:bg-slate-900 text-slate-300 flex flex-col shadow-2xl z-20 border-r border-slate-800">
+        <div class="h-20 flex items-center px-8 border-b border-slate-800">
+            <div class="w-10 h-10 bg-indigo-500 rounded-lg flex items-center justify-center text-white font-bold text-xl mr-3 shadow-lg shadow-indigo-500/30">L</div>
+            <span class="text-2xl font-bold text-white tracking-wide">Laska<span class="text-indigo-400">admin</span></span>
+        </div>
         
-        <div class="lg:col-span-2 bg-white rounded-lg shadow-sm border p-6">
-            <h2 class="text-xl font-bold mb-4 text-slate-700 flex items-center gap-2">
-                📊 የተማሪዎች ውጤት ዝርዝር
-            </h2>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm border-collapse">
-                    <thead>
-                        <tr class="bg-slate-50 border-b">
-                            <th class="p-3">ተማሪ</th>
-                            <th class="p-3">ውጤት</th>
-                            <th class="p-3">ቀን</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for res in results %}
-                        <tr class="border-b hover:bg-slate-50">
-                            <td class="p-3 font-medium">{{ res.username }}</td>
-                            <td class="p-3"><span class="bg-green-100 text-green-700 px-2 py-1 rounded font-bold">{{ res.score }}/{{ res.total }}</span></td>
-                            <td class="p-3 text-gray-500">{{ res.date_taken }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+        <nav class="flex-1 px-4 py-8 space-y-2 overflow-y-auto">
+            <button onclick="showMainSection('students-main', this)" class="nav-btn w-full flex items-center px-4 py-3 bg-indigo-600 text-white rounded-xl transition-all shadow-md">
+                <span class="text-xl mr-3">👥</span><span class="font-medium">ተማሪዎች</span>
+            </button>
+            <button onclick="showMainSection('exams-main', this)" class="nav-btn w-full flex items-center px-4 py-3 hover:bg-slate-800 rounded-xl transition-all">
+                <span class="text-xl mr-3">📝</span><span class="font-medium">ፈተናዎች</span>
+            </button>
+            <button onclick="showMainSection('results-main', this)" class="nav-btn w-full flex items-center px-4 py-3 hover:bg-slate-800 rounded-xl transition-all">
+                <span class="text-xl mr-3">📊</span><span class="font-medium">ውጤት</span>
+            </button>
+        </nav>
+        
+        <div class="p-4 border-t border-slate-800">
+            <a href="/dashboard" class="flex items-center justify-center w-full px-4 py-3 bg-slate-800 hover:bg-rose-600 text-white rounded-xl transition-all">ወደ ዳሽቦርድ ውጣ</a>
         </div>
+    </aside>
 
-        <div class="bg-white rounded-lg shadow-sm border p-6 h-fit">
-            <h2 class="text-xl font-bold mb-4 text-slate-700">➕ አዲስ ጥያቄ ጨምር</h2>
-            <form action="/add_question" method="POST" class="space-y-4">
-                <textarea name="text" placeholder="ጥያቄውን እዚህ ያስገቡ..." class="w-full border p-2 rounded h-24 text-sm" required></textarea>
-                <div class="space-y-2">
-                    <input type="text" name="a" placeholder="ምርጫ A" class="w-full border p-2 rounded text-sm" required>
-                    <input type="text" name="b" placeholder="ምርጫ B" class="w-full border p-2 rounded text-sm" required>
-                    <input type="text" name="c" placeholder="ምርጫ C" class="w-full border p-2 rounded text-sm" required>
-                    <input type="text" name="d" placeholder="ምርጫ D" class="w-full border p-2 rounded text-sm" required>
+    <div class="flex-1 flex flex-col h-screen overflow-hidden">
+        
+        <header class="h-20 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-8 z-10 transition-colors duration-300">
+            <h1 id="page-title" class="text-2xl font-bold text-slate-800 dark:text-white">ተማሪዎች</h1>
+            <button onclick="toggleDarkMode()" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all text-xl">
+               <span id="theme-icon-light" class="block dark:hidden">🌙</span>
+               <span id="theme-icon-dark" class="hidden dark:block">☀️</span>
+            </button>
+        </header>
+        <main class="flex-1 overflow-y-auto p-8">
+            
+            {% with messages = get_flashed_messages() %}
+              {% if messages %}
+                <div class="mb-6 bg-emerald-50 dark:bg-emerald-950/30 border-l-4 border-emerald-500 text-emerald-700 dark:text-emerald-400 p-4 rounded-r-lg shadow-sm">
+                  {% for message in messages %}
+                    <p class="font-medium flex items-center">✅ {{ message }}</p>
+                  {% endfor %}
                 </div>
-                <label class="block text-xs font-bold text-gray-500">ትክክለኛ መልስ</label>
-                <select name="correct" class="w-full border p-2 rounded text-sm bg-gray-50">
-                    <option value="a">A</option>
-                    <option value="b">B</option>
-                    <option value="c">C</option>
-                    <option value="d">D</option>
-                </select>
-                <select name="exam_id" class="w-full border p-2 rounded text-sm bg-gray-50" required>
-                   <option value="">-- ፈተና ምረጥ --</option>
-                     {% for exam in exams %}
-                 <option value="{{ exam.id }}">{{ exam.title }}</option>
-                    {% endfor %}
-               </select>
-                <button type="submit" class="w-full bg-cyan-600 text-white font-bold py-2 rounded hover:bg-cyan-700 transition">ጥያቄውን መዝግብ</button>
-            </form>
-        </div>
-    
-    </div>
-    <div class="bg-white rounded-lg shadow-sm border p-6 mt-8">
-    <h2 class="text-xl font-bold mb-4 text-slate-700">📤 ጥያቄዎችን በ Excel (CSV) ጫን</h2>
-    <form action="/upload_csv" method="POST" enctype="multipart/form-data" class="space-y-4">
-        <input type="file" name="file" accept=".csv" class="border p-2 w-full text-sm" required>
-        <p class="text-xs text-gray-500 italic">ፋይሉ በቅደም ተከተል: ጥያቄ, A, B, C, D, መልስ መያዝ አለበት።</p>
-        <select name="exam_id" class="w-full border p-2 rounded text-sm" required>
-            <option value="">-- ፈተና ምረጥ --</option>
-            {% for exam in exams %}
-                <option value="{{ exam.id }}">{{ exam.title }}</option>
-            {% endfor %}
-        </select>
-        <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 font-bold">ፋይሉን ጫን</button>
-    </form>
-   </div>
-<div class="bg-white rounded-lg shadow-sm border p-6 mt-8">
-    <h2 class="text-xl font-bold mb-4 text-slate-700">👨‍🎓 አዲስ ተማሪ መዝግብ</h2>
-    <form action="/add_student" method="POST" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <input type="text" name="username" placeholder="የተማሪ ስም (Username)" class="border p-2 rounded text-sm" required>
-        <input type="password" name="password" placeholder="የይለፍ ቃል (Password)" class="border p-2 rounded text-sm" required>
-        <button type="submit" class="bg-slate-800 text-white font-bold py-2 rounded hover:bg-black transition">ተማሪውን ፍጠር</button>
-    </form>
-</div>
-<div class="bg-white rounded-lg shadow-sm border p-6 mt-8">
-    <h2 class="text-xl font-bold mb-4 text-slate-700">📚 አዲስ ፈተና (Course) ፍጠር</h2>
-    <form action="/add_exam" method="POST" class="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <input type="text" name="title" placeholder="የፈተናው ስም (ለምሳሌ Physics)" class="border p-2 rounded text-sm" required>
-        <input type="text" name="category" placeholder="ምድብ (Category)" class="border p-2 rounded text-sm">
-        <input type="text" name="password" placeholder="የፈተና ሚስጥር ቃል" class="border p-2 rounded text-sm" required>
-        <button type="submit" class="bg-cyan-600 text-white font-bold py-2 rounded hover:bg-cyan-700">ፈተናውን ፍጠር</button>
-    </form>
-</div>
-<div class="bg-white rounded-lg shadow-sm border p-6 mt-">
-    <h2 class="text-xl font-bold mb-4 text-slate-700">📋 የተመዘገቡ ተማሪዎች</h2>
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
-        {% for user in all_users %}
-            {% if user.role != 'admin' %}
-            <div class="bg-gray-50 p-2 rounded text-xs border flex justify-between">
-                <span>{{ user.username }}</span>
-                <span class="text-gray-400">****</span>
-            </div>
-            {% endif %}
-        {% endfor %}
-    </div>
-<div>
-<section class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-    <h2 class="font-bold border-b pb-2 mb-6">My courses</h2>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {% for exam in exams %}
-        <div class="border rounded-lg hover:shadow-md transition cursor-pointer overflow-hidden" 
-             onclick="location.href='/course/{{ exam.id }}'">
-            <div class="h-32 bg-cyan-500 flex items-center justify-center text-white text-3xl font-bold">
-                {{ exam.title[0] }} </div>
-            <div class="p-4">
-                <p class="text-teal-600 underline font-medium">{{ exam.title }}</p>
-                <p class="text-xs text-gray-400">{{ exam.category }}</p>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-    
-</section>    
-</div>
+              {% endif %}
+            {% endwith %}
 
-</div>
-    <div class="flex justify-between items-center mb-4">
-    <h2 class="text-xl font-bold text-slate-700 italic">📊 የተማሪዎች ውጤት ዝርዝር</h2>
-    <a href="/export_results" class="bg-green-600 text-white px-4 py-2 rounded text-xs font-bold hover:bg-green-700 transition">
-        📥 በ Excel (CSV) አውርድ
-    </a>
-</div>
+            <section id="students-main" class="main-section active-section">
+                <div class="flex flex-wrap gap-2 bg-slate-200/60 dark:bg-slate-800/60 p-1.5 rounded-xl mb-8 w-max">
+                    <button onclick="toggleSubSection('students', 'import-xml', this)" class="sub-tab-btn px-6 py-2.5 rounded-lg text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">በ CSV አስገባ</button>
+                    <button onclick="toggleSubSection('students', 'add-single', this)" class="sub-tab-btn px-6 py-2.5 rounded-lg text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">መዝግብ</button>
+                    <button onclick="toggleSubSection('students', 'manage-students', this)" class="sub-tab-btn px-6 py-2.5 rounded-lg text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">የተማሪዎች ዝርዝር</button>
+                </div>
+
+                <div id="students-import-xml" class="sub-section bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 hidden-section">
+                    <h3 class="text-xl font-bold mb-4">በ CSV ፋይል አስገባ</h3>
+                    <form action="/admin/import_students" method="POST" enctype="multipart/form-data">
+                        <input type="file" name="file" accept=".csv" required class="block w-full border dark:border-slate-700 dark:bg-slate-800 p-2 mb-4 rounded-lg">
+                        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-lg font-medium transition-all shadow-md">ጫን</button>
+                    </form>
+                </div>
+
+                <div id="students-add-single" class="sub-section bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 hidden-section">
+                    <h3 class="text-xl font-bold mb-4">ተማሪ መዝግብ</h3>
+                    <form action="/admin/add_single_student" method="POST">
+                        <input type="text" name="username" placeholder="የተማሪው ሙሉ ስም" required class="border dark:border-slate-700 dark:bg-slate-800 p-3 w-full mb-4 rounded-lg outline-none focus:border-indigo-500">
+                        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-lg font-medium transition-all shadow-md">መዝግብ</button>
+                    </form>
+                </div>
+
+                <div id="students-manage-students" class="sub-section bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 hidden-section">
+                    <h3 class="text-xl font-bold mb-4">የተመዘገቡ ተማሪዎች</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border dark:border-slate-800 rounded-lg">
+                            <thead class="bg-slate-50 dark:bg-slate-800/50">
+                                <tr>
+                                    <th class="p-3 border-b dark:border-slate-800">ስም</th>
+                                    <th class="p-3 border-b dark:border-slate-800 text-center">Setting</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for u in all_users if u.role != 'admin' %}
+                                <tr class="border-b dark:border-slate-800 hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
+                                    <td class="p-3 font-medium">{{ u.username }}</td>
+                                    <td class="p-3 text-center">
+                                        <form action="/admin/delete_student/{{ u.id }}" method="POST" onsubmit="return confirm('እርግጠኛ ነህ ይህ ተማሪ ይጥፋ?')">
+                                            <button class="text-rose-500 hover:text-rose-700 font-medium transition-all">❌ አጥፋ</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+           <section id="exams-main" class="main-section hidden-section">
+                <div class="flex flex-wrap gap-2 bg-slate-200/60 dark:bg-slate-800/60 p-1.5 rounded-xl mb-8 w-max">
+                    <button onclick="toggleSubSection('exams', 'create-and-list', this)" class="sub-tab-btn px-6 py-2.5 rounded-lg text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">ፈተናዎች</button>
+                    <button onclick="toggleSubSection('exams', 'add-manual-question', this)" class="sub-tab-btn px-6 py-2.5 rounded-lg text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">ጥያቄ በእጅ ለመጨምር</button>
+                    <button onclick="toggleSubSection('exams', 'import-csv-questions', this)" class="sub-tab-btn px-6 py-2.5 rounded-lg text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">ጥያቄዎችን በ CSV ለመጨምር</button>
+                </div>
+                
+                <div id="exams-create-and-list" class="sub-section space-y-8 hidden-section">
+                    
+                    <div class="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
+                        <h3 class="text-xl font-bold mb-4 text-indigo-600 dark:text-indigo-400">🆕 አዲስ የፈተና ርዕስ ፍጠር</h3>
+                        <form action="/add_exam" method="POST" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">የፈተናው ስም (Title)፡</label>
+                                <input type="text" name="title" placeholder="ለምሳሌ፡ Mid Exam, Final Exam" required class="w-full border dark:border-slate-700 dark:bg-slate-800 p-3 rounded-lg outline-none focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">ክፍል/ካቴጎሪ (Category)፡</label>
+                                <input type="text" name="category" placeholder="ለምሳሌ፡ Grade 12, Python" required class="w-full border dark:border-slate-700 dark:bg-slate-800 p-3 rounded-lg outline-none focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">የመግቢያ ኮድ (Exam Password)፡</label>
+                                <input type="text" name="password" placeholder="ተማሪዎች ፈተናውን ለመጀመር የሚጠቀሙት" required class="w-full border dark:border-slate-700 dark:bg-slate-800 p-3 rounded-lg outline-none focus:border-indigo-500">
+                            </div>
+                            <div class="mb-4">
+                               <label class="block text-sm font-medium mb-1">የፈተናው ደህንነት ሁኔታ (Status)፦</label>
+                               <select name="is_public" class="w-full border dark:border-slate-700 dark:bg-slate-800 p-2.5 rounded-lg outline-none">
+                                <option value="true">🌍 ለሁሉም ተማሪዎች ይታይ (Public)</option>
+                                 <option value="false">🔒 ለጊዜው ይደበቅ (Private)</option>
+                               </select>
+                              </div>
+                            <button type="submit" class="md:col-span-3 bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-medium transition-all shadow-md">ፈተናውን መዝግብ</button>
+                        </form>
+                    </div>
+
+                    <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
+                        <h3 class="text-xl font-bold mb-4 text-slate-700 dark:text-slate-300">📋 የፈተናዎች ዝርዝር</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border dark:border-slate-800 rounded-lg">
+                                <thead class="bg-slate-50 dark:bg-slate-800/50">
+                                    <tr>
+                                        <th class="p-3 border-b dark:border-slate-800">የፈተና ርዕስ</th>
+                                        <th class="p-3 border-b dark:border-slate-800">ካቴጎሪ</th>
+                                        <th class="p-3 border-b dark:border-slate-800">ኮድ</th>
+                                        <th class="p-3 border-b dark:border-slate-800 text-center">ደህንነት (Public/Private)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for exam in exams %}
+                                    <tr class="border-b dark:border-slate-800 hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
+                                        <td class="p-3 font-medium">{{ exam.title }}</td>
+                                        <td class="p-3 text-slate-500 dark:text-slate-400">{{ exam.category }}</td>
+                                        <td class="p-3 font-mono text-sm text-indigo-600 dark:text-indigo-400">{{ exam.password }}</td>
+                                        <td class="p-3 text-center flex justify-center gap-3">
+                                            
+                                            <form action="/admin/toggle_exam_status/{{ exam.id }}" method="POST">
+                                                {% if exam.is_public %}
+                                                <button type="submit" class="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 transition-all hover:bg-emerald-200">
+                                                    🌍 Public
+                                                </button>
+                                                {% else %}
+                                                <button type="submit" class="px-3 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200 dark:border-rose-800 transition-all hover:bg-rose-200">
+                                                    🔒 Private
+                                                </button>
+                                                {% endif %}
+                                            </form>
+                                            
+                                            <form action="/admin/delete_exam/{{ exam.id }}" method="POST" onsubmit="return confirm('ይህንን ፈተና ስታጠፋው በውስጡ ያሉ ጥያቄዎች በሙሉ አብረው ይጠፋሉ። እርግጠኛ ነህ?')">
+                                                <button type="submit" class="text-rose-500 hover:text-rose-700 text-sm font-medium transition-all">❌ አጥፋ</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    {% else %}
+                                    <tr>
+                                        <td colspan="4" class="p-4 text-center text-slate-400">እስካሁን ምንም የተፈጠረ ፈተና የለም።</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="exams-add-manual-question" class="sub-section bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 hidden-section">
+                    <h3 class="text-xl font-bold mb-4 text-emerald-600 dark:text-emerald-400">❓ ለፈተናው ጥያቄ በእጅ ጨምር</h3>
+                    <form action="/add_question" method="POST" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">ፈተና ይምረጡ፡</label>
+                            <select name="exam_id" required class="w-full border dark:border-slate-700 dark:bg-slate-800 p-3 rounded-lg outline-none focus:border-indigo-500">
+                                <option value="">-- ጥያቄው የሚገባበትን ፈተና ይምረጡ --</option>
+                                {% for exam in exams %}
+                                <option value="{{ exam.id }}">{{ exam.title }} ({{ exam.category }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">የጥያቄው ፅሁፍ (Question)፡</label>
+                            <textarea name="text" placeholder="ጥያቄውን እዚህ ይጻፉ..." required class="w-full border dark:border-slate-700 dark:bg-slate-800 p-3 rounded-lg outline-none focus:border-indigo-500 h-24"></textarea>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <input type="text" name="a" placeholder="ምርጫ A" required class="border dark:border-slate-700 dark:bg-slate-800 p-3 rounded-lg outline-none focus:border-indigo-500">
+                            <input type="text" name="b" placeholder="ምርጫ B" required class="border dark:border-slate-700 dark:bg-slate-800 p-3 rounded-lg outline-none focus:border-indigo-500">
+                            <input type="text" name="c" placeholder="ምርጫ C" required class="border dark:border-slate-700 dark:bg-slate-800 p-3 rounded-lg outline-none focus:border-indigo-500">
+                            <input type="text" name="d" placeholder="ምርጫ D" required class="border dark:border-slate-700 dark:bg-slate-800 p-3 rounded-lg outline-none focus:border-indigo-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">ትክክለኛ መልስ፡</label>
+                            <select name="correct" required class="w-full border dark:border-slate-700 dark:bg-slate-800 p-3 rounded-lg outline-none focus:border-indigo-500">
+                                <option value="a">A</option>
+                                <option value="b">B</option>
+                                <option value="c">C</option>
+                                <option value="d">D</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-lg font-medium transition-all shadow-md">ጥያቄውን አስገባ</button>
+                    </form>
+                </div>
+                
+                <div id="exams-import-csv-questions" class="sub-section bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 hidden-section">
+                    <h3 class="text-xl font-bold mb-4 text-indigo-600 dark:text-indigo-400">📤 ጥያቄዎችን በ CSV ጨምር </h3>
+                    <form action="/upload_csv" method="POST" enctype="multipart/form-data" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">ጥያቄዎቹ የሚገቡበትን ፈተና ይምረጡ፡</label>
+                            <select name="exam_id" required class="w-full border dark:border-slate-700 dark:bg-slate-800 p-3 rounded-lg outline-none focus:border-indigo-500">
+                                <option value="">-- ፈተና ይምረጡ --</option>
+                                {% for exam in exams %}
+                                <option value="{{ exam.id }}">{{ exam.title }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">የCSV ፋይል ይምረጡ፡</label>
+                            <input type="file" name="file" accept=".csv" required class="block w-full border dark:border-slate-700 dark:bg-slate-800 p-2 rounded-lg">
+                        </div>
+                        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-lg font-medium transition-all shadow-md">ፋይሉን አስገባ</button>
+                    </form>
+                </div>
+            </section>
+       
+           <section id="results-main" class="main-section hidden-section">
+                
+                <div class="flex flex-wrap gap-2 bg-slate-200/60 dark:bg-slate-800/60 p-1.5 rounded-xl mb-8 w-max">
+                    <button onclick="toggleSubSection('results', 'export-xml', this)" class="sub-tab-btn px-5 py-2.5 rounded-lg text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">ውጤት ለአውርድ</button>
+                    <button onclick="toggleSubSection('results', 'view-table', this)" class="sub-tab-btn px-5 py-2.5 rounded-lg text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">ውጤት ማያ</button>
+                    <button id="btn-search-tab" onclick="toggleSubSection('results', 'search-view', this)" class="sub-tab-btn px-5 py-2.5 rounded-lg text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">በስም ወይም በቀን ውጤት መፈለ</button>
+                    <button onclick="toggleSubSection('results', 'delete-management', this)" class="sub-tab-btn px-5 py-2.5 rounded-lg text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">ውጤት ማጥፊያ</button>
+                </div>
+
+                <div id="results-export-xml" class="sub-section bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 hidden-section text-center max-w-md mx-auto">
+                    <div class="w-16 h-16 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4">📜</div>
+                    <h3 class="text-xl font-bold mb-2 text-slate-800 dark:text-white">ውጤቶችን በ CSV ፎርማት አውርድ</h3>
+                    <p class="text-slate-500 dark:text-slate-400 text-sm mb-6">የሁሉንም ተማሪዎች ውጤት በኮምፒውተርዎ በቀላሉ ለማስቀመጥ ፋይሉን ያውርዱ።</p>
+                    <a href="/export_results" class="inline-block w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-semibold transition-all shadow-md">ፋይሉን  አውርድ </a>
+                </div>
+
+                <div id="results-view-table" class="sub-section bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 hidden-section">
+                    <h3 class="text-xl font-bold mb-4 text-slate-700 dark:text-slate-300">📊 ሙሉ የተማሪዎች ውጤት ዝርዝር</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border dark:border-slate-800 rounded-lg">
+                            <thead class="bg-slate-50 dark:bg-slate-800/50">
+                                <tr>
+                                    <th class="p-3 border-b dark:border-slate-800">የተማሪ ስም</th>
+                                    <th class="p-3 border-b dark:border-slate-800">የፈተና ርዕስ</th>
+                                    <th class="p-3 border-b dark:border-slate-800 text-center">ውጤት</th>
+                                    <th class="p-3 border-b dark:border-slate-800 text-center">ፐርሰንት</th>
+                                    <th class="p-3 border-b dark:border-slate-800">ቀን</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for res in results %}
+                                <tr class="border-b dark:border-slate-800 hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
+                                    <td class="p-3 font-medium text-indigo-600 dark:text-indigo-400">{{ res.username }}</td>
+                                    <td class="p-3">{{ res.exam_title }}</td>
+                                    <td class="p-3 text-center font-bold text-emerald-600 dark:text-emerald-400">{{ res.score }} / {{ res.total }}</td>
+                                    <td class="p-3 text-center font-mono text-sm">{% if res.total > 0 %}{{ ((res.score / res.total) * 100) | round(1) }}%{% else %}0%{% endif %}</td>
+                                    <td class="p-3 text-sm text-slate-500 dark:text-slate-400">{{ res.date_taken }}</td>
+                                </tr>
+                                {% else %}
+                                <tr><td colspan="5" class="p-4 text-center text-slate-400">እስካሁን ምንም የተመዘገበ ውጤት የለም።</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="results-search-view" class="sub-section bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 hidden-section space-y-6">
+                    <h3 class="text-xl font-bold text-amber-600 dark:text-amber-400">🔍ውጤት መፈለገያ </h3>
+                    
+                    <form action="/admin" method="GET" class="flex flex-col md:flex-row gap-3">
+                        <div class="flex-1">
+                            <label class="block text-sm font-medium mb-1">ለመፈለግ የተማሪ ስም ወይም ቀን ያስገቡ (ቀን ከሆነ በ YYYY-MM-DD ፎርማት ለምሳሌ፡ 2026-05)፡</label>
+                            <input type="text" name="search_query" value="{{ search_query or '' }}" placeholder="ውጤት ለማየት የፈለጉትን የተማሪ ስም ወይም ቀን ያስገቡ..." required class="w-full border dark:border-slate-700 dark:bg-slate-800 p-3 rounded-lg outline-none focus:border-indigo-500">
+                        </div>
+                        <div class="flex items-end">
+                            <button type="submit" class="w-full md:w-auto bg-amber-500 hover:bg-amber-600 text-white px-8 py-3 rounded-lg font-medium transition-all shadow-md">ፈልግ</button>
+                        </div>
+                    </form>
+
+                    {% if search_query %}
+                    <div class="border-t dark:border-slate-800 pt-6">
+                        <h4 class="text-md font-semibold mb-3">ለ "📂 {{ search_query }}" የተገኘ የፍለጋ ውጤት፡</h4>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border dark:border-slate-800 rounded-lg">
+                                <thead class="bg-amber-50 dark:bg-amber-950/20">
+                                    <tr>
+                                        <th class="p-3 border-b dark:border-slate-800">የተማሪ ስም</th>
+                                        <th class="p-3 border-b dark:border-slate-800">የፈተና ርዕስ</th>
+                                        <th class="p-3 border-b dark:border-slate-800 text-center">ውጤት</th>
+                                        <th class="p-3 border-b dark:border-slate-800 text-center">ፐርሰንት</th>
+                                        <th class="p-3 border-b dark:border-slate-800">የተፈተነበት ቀን</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for res in search_results %}
+                                    <tr class="border-b dark:border-slate-800 hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
+                                        <td class="p-3 font-medium text-amber-600 dark:text-amber-400">{{ res.username }}</td>
+                                        <td class="p-3">{{ res.exam_title }}</td>
+                                        <td class="p-3 text-center font-bold text-emerald-600 dark:text-emerald-400">{{ res.score }} / {{ res.total }}</td>
+                                        <td class="p-3 text-center font-mono text-sm">{% if res.total > 0 %}{{ ((res.score / res.total) * 100) | round(1) }}%{% else %}0%{% endif %}</td>
+                                        <td class="p-3 text-sm text-slate-500 dark:text-slate-400">{{ res.date_taken }}</td>
+                                    </tr>
+                                    {% else %}
+                                    <tr><td colspan="5" class="p-4 text-center text-rose-500">ያስገቡትን ስም ወይም ቀን የሚያሟላ የተማሪ ውጤት አልተገኘም!</td></tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div id="results-delete-management" class="sub-section bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 hidden-section max-w-2xl mx-auto space-y-8">
+                    <h3 class="text-xl font-bold text-rose-600 dark:text-rose-400 border-b dark:border-slate-800 pb-3">⚠️ የተማሪዎች ውጤት ማጥፊያ</h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="border dark:border-slate-800 p-5 rounded-xl space-y-4 bg-rose-50/30 dark:bg-rose-950/10">
+                            <h4 class="font-bold text-rose-600">🔴 ሁሉንም ውጤት ማጥፊያ</h4>
+                            <p class="text-xs text-slate-500 dark:text-slate-400">የሁሉንም ተማሪዎች ውጤቶች በአንድ ጊዜ ሙሉ በሙሉ ያጠፋል።</p>
+                            <form action="/admin/delete_all_results" method="POST" onsubmit="return confirm('እርግጠኛ ነህ? የሁሉም ተማሪዎች ውጤት ሙሉ በሙሉ ሊጠፋ ነው!')">
+                                <button type="submit" class="w-full bg-rose-600 hover:bg-rose-700 text-white py-2.5 rounded-lg font-semibold text-sm transition-all shadow">ሁሉንም ውጤት አጥፋ</button>
+                            </form>
+                        </div>
+
+                        <div class="border dark:border-slate-800 p-5 rounded-xl space-y-3">
+                            <h4 class="font-bold text-slate-700 dark:text-slate-300">📅 በቀን ለይቶ ማጥፊያ</h4>
+                            <p class="text-xs text-slate-500 dark:text-slate-400">የመረጡትን የተወሰነ ቀን ብቻ በመምረጥ በዚያ ቀን የተፈተኑ ተማሪዎችን ውጤት ለይቶ ያጠፋል።</p>
+                            <form action="/admin/delete_results_by_date" method="POST" onsubmit="return confirm('በዚህ ቀን የተመዘገቡ ውጤቶች በሙሉ እንዲጠፉ ትፈልጋለህ?')">
+                                <input type="date" name="delete_date" required class="w-full border dark:border-slate-700 dark:bg-slate-800 p-2 text-sm rounded-lg mb-3 outline-none">
+                                <button type="submit" class="w-full bg-slate-700 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white py-2.5 rounded-lg font-semibold text-sm transition-all shadow">አጥፋ</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {% if search_query %}
+            <script>
+                document.addEventListener("DOMContentLoaded", function() {
+                    const searchBtn = document.getElementById('btn-search-tab');
+                    if (searchBtn) { searchBtn.click(); }
+                });
+            </script>
+            {% endif %}
+
+        </main>
+    </div>
+
+    <script>
+        const titles = {
+            'students-main': 'ተማሪዎች አስተዳደር',
+            'exams-main': 'ፈተናዎች አስተዳደር',
+            'results-main': 'የተማሪ ውጤት መቆጣጠሪያ'
+        };
+
+        function toggleDarkMode() {
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+
+        function showMainSection(sectionId, btnElement) {
+            document.querySelectorAll('.main-section').forEach(sec => {
+                sec.classList.remove('active-section');
+                sec.classList.add('hidden-section');
+            });
+            document.getElementById(sectionId).classList.remove('hidden-section');
+            document.getElementById(sectionId).classList.add('active-section');
+            
+            document.getElementById('page-title').innerText = titles[sectionId];
+
+            document.getElementById(sectionId).querySelectorAll('.sub-section').forEach(sub => {
+                sub.classList.remove('active-section');
+                sub.classList.add('hidden-section');
+            });
+            
+            document.getElementById(sectionId).querySelectorAll('.sub-tab-btn').forEach(b => {
+                b.classList.remove('bg-white', 'dark:bg-slate-700', 'text-indigo-600', 'dark:text-white', 'shadow-sm');
+            });
+
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('bg-indigo-600', 'text-white', 'shadow-md');
+                btn.classList.add('hover:bg-slate-800');
+            });
+            btnElement.classList.remove('hover:bg-slate-800');
+            btnElement.classList.add('bg-indigo-600', 'text-white', 'shadow-md');
+        }
+
+        function toggleSubSection(group, targetId, btnElement) {
+            const targetSection = document.getElementById(`${group}-${targetId}`);
+            const isAlreadyActive = targetSection.classList.contains('active-section');
+
+            const parentSection = document.getElementById(group + '-main');
+            parentSection.querySelectorAll('.sub-section').forEach(sec => {
+                sec.classList.remove('active-section');
+                sec.classList.add('hidden-section');
+            });
+
+            parentDiv = btnElement.parentElement;
+            parentDiv.querySelectorAll('.sub-tab-btn').forEach(btn => {
+                btn.classList.remove('bg-white', 'dark:bg-slate-700', 'text-indigo-600', 'dark:text-white', 'shadow-sm');
+            });
+
+            if (!isAlreadyActive) {
+                targetSection.classList.remove('hidden-section');
+                targetSection.classList.add('active-section');
+                
+                btnElement.classList.add('bg-white', 'dark:bg-slate-700', 'text-indigo-600', 'dark:text-white', 'shadow-sm');
+            }
+        }
+    </script>
 </body>
 </html>
